@@ -33,14 +33,16 @@ import Dispatch
     at path: String = ".",
     process: Process = .init(),
     outputHandle: FileHandle? = nil,
-    errorHandle: FileHandle? = nil
+    errorHandle: FileHandle? = nil,
+    onOutputUpdate: @escaping (String?) -> Void = {_ in }
 ) throws -> String {
     let command = "cd \(path.escapingSpaces) && \(command) \(arguments.joined(separator: " "))"
 
     return try process.launchBash(
         with: command,
         outputHandle: outputHandle,
-        errorHandle: errorHandle
+        errorHandle: errorHandle,
+        onOutputUpdate: onOutputUpdate
     )
 }
 
@@ -379,7 +381,7 @@ extension ShellOutError: LocalizedError {
 // MARK: - Private
 
 private extension Process {
-    @discardableResult func launchBash(with command: String, outputHandle: FileHandle? = nil, errorHandle: FileHandle? = nil) throws -> String {
+    @discardableResult func launchBash(with command: String, outputHandle: FileHandle? = nil, errorHandle: FileHandle? = nil, onOutputUpdate: @escaping (String?) -> Void) throws -> String {
         launchPath = "/bin/bash"
         arguments = ["-c", "-l", command]
 
@@ -404,6 +406,7 @@ private extension Process {
             outputQueue.async {
                 outputData.append(data)
                 outputHandle?.write(data)
+                onOutputUpdate(String(data: data, encoding: .utf8))
             }
         }
 
